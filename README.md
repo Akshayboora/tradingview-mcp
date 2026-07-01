@@ -1,9 +1,14 @@
 # TradingView MCP Bridge
 
-Personal AI assistant for your TradingView Desktop charts. Connects Claude Code to your locally running TradingView app via Chrome DevTools Protocol for AI-assisted chart analysis, Pine Script development, and workflow automation.
+Personal AI assistant for your TradingView Desktop charts. Connects Claude Code to your locally running TradingView app via Chrome DevTools Protocol for AI-assisted chart analysis, Pine Script development, and chart automation.
+
+![Status](https://img.shields.io/badge/Status-Active-brightgreen)
+![Node.js](https://img.shields.io/badge/Node.js-18+-green)
+![License](https://img.shields.io/badge/License-MIT-blue)
+![TradingView](https://img.shields.io/badge/TradingView-Desktop-blue)
 
 > [!WARNING]
-> **This tool is not affiliated with, endorsed by, or associated with TradingView Inc.** It interacts with your locally running TradingView Desktop application via Chrome DevTools Protocol. Review the [Disclaimer](#disclaimer) before use.
+> **This tool is not affiliated with, endorsed by, or associated with TradingView Inc.** It interacts with your locally running TradingView Desktop application via Chrome DevTools Protocol. Review the [disclaimer](#disclaimer) before use.
 
 > [!IMPORTANT]
 > **Requires a valid TradingView subscription.** This tool does not bypass or circumvent any TradingView paywall or access control. It reads from and controls the TradingView Desktop app already running on your machine.
@@ -12,11 +17,26 @@ Personal AI assistant for your TradingView Desktop charts. Connects Claude Code 
 > **All data processing occurs locally on your machine.** No TradingView data is transmitted, stored, or redistributed externally by this tool.
 
 > [!CAUTION]
-> This tool accesses undocumented internal TradingView APIs via the Electron debug interface. These can change or break without notice in any TradingView update. Pin your TradingView Desktop version if stability matters to you.
+> This tool accesses undocumented internal TradingView APIs via the Electron debug interface. These can change or break without notice in any TradingView update. Pin your TradingView Desktop version if stability is critical.
+
+## Architecture
+
+```
+Claude Code
+    ↓ (MCP protocol/stdio)
+MCP Server (Node.js)
+    ↓ (Chrome DevTools Protocol)
+TradingView Desktop (Electron, localhost:9222)
+```
+
+- **Transport**: MCP over stdio (78 tools) + CLI (`tv` command)
+- **Connection**: Chrome DevTools Protocol on localhost:9222 (must enable manually)
+- **Data Flow**: All processing local; zero external connections
+- **No dependencies** beyond `@modelcontextprotocol/sdk` and `chrome-remote-interface`
 
 ## How It Works (and why it's safe to run)
 
-This tool does not connect to TradingView's servers, modify any TradingView files, or intercept any network traffic. It communicates exclusively with your locally running TradingView Desktop instance via Chrome DevTools Protocol (CDP) — a standard debugging interface built into all Chromium/Electron applications by Google, including VS Code, Slack, and Discord.
+This tool does not connect to TradingView's servers, modify any TradingView files, or intercept any network traffic. It communicates exclusively with your locally running TradingView Desktop instance via Chrome DevTools Protocol.
 
 The debug port is disabled by default and must be explicitly enabled by you using a standard Chromium flag (`--remote-debugging-port=9222`). Nothing happens without that deliberate step.
 
@@ -28,22 +48,6 @@ The debug port is disabled by default and must be explicitly enabled by you usin
 - Bypass any TradingView paywall or access restriction
 - Execute real trades (chart interaction only)
 - Work if TradingView changes their internal Electron structure
-
-## Research Context
-
-This project explores an open research question: **how can LLM-based agents interact with professional trading interfaces to support human decision-making?**
-
-Specifically it investigates:
-
-- How structured tool APIs (MCP) can bridge LLMs and stateful desktop financial applications
-- What latency, context, and reliability constraints emerge when an agent operates on live chart data
-- How agents handle ambiguous financial UI state (e.g. interpreting Pine Script output, reading indicator tables)
-- Whether natural language is an effective interface for chart navigation and Pine Script development
-- The failure modes of LLM agents operating in real-time data environments
-
-This is not a trading bot. It is an interface layer that makes a trading application legible to an LLM agent, allowing researchers and developers to study human-AI collaboration in financial workflows.
-
-See [RESEARCH.md](RESEARCH.md) for open questions, findings, and related work.
 
 ## Prerequisites
 
@@ -68,15 +72,7 @@ Gives your AI assistant eyes and hands on your own chart:
 - **CLI access** — every MCP tool is also a `tv` CLI command, pipe-friendly with JSON output
 - **Launch TradingView** — auto-detect and launch with debug mode from any platform
 
-## Install with Claude Code
-
-Paste this into Claude Code and it will handle the rest:
-
-> Install the TradingView MCP server. Clone https://github.com/tradesdontlie/tradingview-mcp.git, run npm install, add it to my MCP config at ~/.claude/.mcp.json, and launch TradingView with the debug port. Then verify the connection with tv_health_check.
-
-Or follow the manual steps below.
-
-## Quick Start
+## 🚀 Get Running in 2 Minutes
 
 ### 1. Install
 
@@ -86,32 +82,20 @@ cd tradingview-mcp
 npm install
 ```
 
-### 2. Launch TradingView with CDP
+### 2. Launch TradingView with Chrome DevTools Protocol
 
-TradingView Desktop must be running with Chrome DevTools Protocol enabled on port 9222.
-
-**Mac:**
 ```bash
-./scripts/launch_tv_debug_mac.sh
-```
+# Auto-detect and launch (any platform):
+node src/cli/index.js launch
 
-**Windows:**
-```bash
-scripts\launch_tv_debug.bat
-```
-
-**Linux:**
-```bash
-./scripts/launch_tv_debug_linux.sh
-```
-
-**Or launch manually on any platform:**
-```bash
+# Or manually launch with the debug flag:
 /path/to/TradingView --remote-debugging-port=9222
 ```
 
-**Or use the MCP tool** (auto-detects your install):
-> "Use tv_launch to start TradingView in debug mode"
+**Platform-specific scripts:**
+- **Mac**: `./scripts/launch_tv_debug_mac.sh`
+- **Windows**: `scripts\launch_tv_debug.bat`
+- **Linux**: `./scripts/launch_tv_debug_linux.sh`
 
 ### 3. Add to Claude Code
 
@@ -128,23 +112,54 @@ Add to your Claude Code MCP config (`~/.claude/.mcp.json` or project `.mcp.json`
 }
 ```
 
-Replace `/path/to/tradingview-mcp` with your actual path.
+Replace `/path/to/tradingview-mcp` with your actual installation path.
 
-### 4. Verify
+### 4. Verify Connection
 
 Ask Claude: *"Use tv_health_check to verify TradingView is connected"*
 
-## CLI
-
-Every MCP tool is also accessible as a `tv` CLI command. All output is JSON for piping with `jq`.
-
+Or use CLI:
 ```bash
-# Install globally (optional)
-npm link
-
-# Or run directly
-node src/cli/index.js <command>
+node src/cli/index.js status
 ```
+
+## Common Workflows
+
+### Analyze Your Chart Right Now
+```bash
+# Get price + all indicator values + price levels + annotations
+node src/cli/index.js quote && \
+  node src/cli/index.js values && \
+  node src/cli/index.js data lines
+```
+
+### Switch to ES Daily with RSI
+```bash
+node src/cli/index.js symbol ES1! && \
+  node src/cli/index.js timeframe D && \
+  node src/cli/index.js indicator add "Relative Strength Index"
+```
+
+### Create Pine Script with AI Help
+Ask Claude: *"Create a Pine Script that alerts when RSI crosses 70"*
+
+Claude will:
+1. Write the code
+2. Inject it into your editor (`pine_set_source`)
+3. Compile it (`pine_smart_compile`)
+4. Show you errors if any (`pine_get_errors`)
+
+### Set Up 4-Chart Grid
+```bash
+# Create 2x2 layout with different symbols per pane
+node src/cli/index.js pane layout 2x2 && \
+  node src/cli/index.js pane symbol 0 AAPL && \
+  node src/cli/index.js pane symbol 1 ES1! && \
+  node src/cli/index.js pane symbol 2 EURUSD && \
+  node src/cli/index.js pane symbol 3 BTCUSD
+```
+
+## CLI Reference
 
 ### Quick Examples
 
@@ -152,12 +167,11 @@ node src/cli/index.js <command>
 tv status                          # check connection
 tv quote                           # current price
 tv symbol AAPL                     # change symbol
-tv ohlcv --summary                 # price summary
-tv screenshot -r chart             # capture chart
+tv ohlcv --summary                 # price summary (compact)
+tv screenshot -r chart             # capture chart region
 tv pine compile                    # compile Pine Script
 tv pane layout 2x2                 # 4-chart grid
-tv pane symbol 1 ES1!              # set pane symbol
-tv stream quote | jq '.close'      # monitor price changes
+tv stream quote | jq '.close'      # monitor price in real-time
 ```
 
 ### All Commands
@@ -180,7 +194,19 @@ tv ui click/keyboard/hover/scroll/find/eval/type/panel/fullscreen/mouse
 tv screenshot / discover / ui-state / range / scroll
 ```
 
-## Streaming
+### Install CLI Globally (Optional)
+
+```bash
+cd /path/to/tradingview-mcp
+npm link
+
+# Now use anywhere:
+tv status
+tv quote
+tv symbol AAPL
+```
+
+## Streaming Real-Time Data
 
 The `tv stream` commands poll your locally running TradingView Desktop instance at regular intervals via Chrome DevTools Protocol on localhost.
 
@@ -207,7 +233,7 @@ Claude reads [`CLAUDE.md`](CLAUDE.md) automatically when working in this project
 | "What's on my chart?" | `chart_get_state` → `data_get_study_values` → `quote_get` |
 | "What levels are showing?" | `data_get_pine_lines` → `data_get_pine_labels` |
 | "Read the session table" | `data_get_pine_tables` with `study_filter` |
-| "Give me a full analysis" | `quote_get` → `data_get_study_values` → `data_get_pine_lines` → `data_get_pine_labels` → `data_get_pine_tables` → `data_get_ohlcv` (summary) → `capture_screenshot` |
+| "Give me a full analysis" | `quote_get` → `data_get_study_values` → `data_get_pine_lines` → `data_get_pine_labels` → `data_get_pine_tables` → `data_get_ohlcv` (summary) |
 | "Switch to AAPL daily" | `chart_set_symbol` → `chart_set_timeframe` |
 | "Write a Pine Script for..." | `pine_set_source` → `pine_smart_compile` → `pine_get_errors` |
 | "Start replay at March 1st" | `replay_start` → `replay_step` → `replay_trade` |
@@ -336,6 +362,17 @@ Launch scripts and `tv_launch` auto-detect TradingView. If auto-detection fails:
 
 The key flag: `--remote-debugging-port=9222`
 
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `ERR_CONNECTION_REFUSED` | Run `node src/cli/index.js launch` or manually start: `/path/to/TradingView --remote-debugging-port=9222` |
+| MCP not found in Claude | Verify path in `~/.claude/.mcp.json` matches your actual install location. Use absolute path. |
+| Pine Script won't compile | Check `tv pine errors` output — read error line number and description. |
+| "Cannot find TradingView" | Update PATH or run launch script directly: `./scripts/launch_tv_debug_mac.sh` |
+| Streaming returns empty data | Ensure at least one indicator is visible on chart; use `study_filter` to target specific indicator |
+| Chart symbol won't change | Use full symbol name with exchange (e.g., `NASDAQ:AAPL` not just `AAPL`) |
+
 ## Testing
 
 ```bash
@@ -345,16 +382,21 @@ npm test
 
 29 tests covering: Pine Script static analysis, server-side compilation, and CLI routing.
 
-## Architecture
+## Research Context
 
-```
-Claude Code  ←→  MCP Server (stdio)  ←→  CDP (port 9222)  ←→  TradingView Desktop (Electron)
-```
+This project explores an open research question: **how can LLM-based agents interact with professional trading interfaces to support human decision-making?**
 
-- **Transport**: MCP over stdio (78 tools) + CLI (`tv` command, 30 commands with 66 subcommands)
-- **Connection**: Chrome DevTools Protocol on localhost:9222
-- **Streaming**: Poll-and-diff loop with deduplication, JSONL output to stdout
-- **No dependencies** beyond `@modelcontextprotocol/sdk` and `chrome-remote-interface`
+Specifically it investigates:
+
+- How structured tool APIs (MCP) can bridge LLMs and stateful desktop financial applications
+- What latency, context, and reliability constraints emerge when an agent operates on live chart data
+- How agents handle ambiguous financial UI state (e.g. interpreting Pine Script output, reading indicator tables)
+- Whether natural language is an effective interface for chart navigation and Pine Script development
+- The failure modes of LLM agents operating in real-time data environments
+
+This is not a trading bot. It is an interface layer that makes a trading application legible to an LLM agent, allowing researchers and developers to study human-AI collaboration in financial workflows.
+
+See [RESEARCH.md](RESEARCH.md) for open questions, findings, and related work.
 
 ## Attributions
 
@@ -368,14 +410,14 @@ This tool is an independent MCP server that connects to Claude Code via the stan
 
 This project is provided **for personal, educational, and research purposes only**.
 
-**How this tool works:** This tool uses the Chrome DevTools Protocol (CDP), a standard debugging interface built into all Chromium-based applications by Google. It does not reverse engineer any proprietary TradingView protocol, connect to TradingView's servers, or bypass any access controls. The debug port must be explicitly enabled by the user via a standard Chromium command-line flag (`--remote-debugging-port=9222`).
+**How this tool works:** This tool uses the Chrome DevTools Protocol (CDP), a standard debugging interface built into all Chromium-based applications by Google. It does not reverse engineer any proprietary code or bypass any security measures.
 
 By using this software, you acknowledge and agree that:
 
 1. **You are solely responsible** for ensuring your use of this tool complies with [TradingView's Terms of Use](https://www.tradingview.com/policies/) and all applicable laws.
-2. TradingView's Terms of Use **restrict automated data collection, scraping, and non-display usage** of their platform and data. This tool uses Chrome DevTools Protocol to programmatically interact with the TradingView Desktop app, which may conflict with those terms.
+2. TradingView's Terms of Use **restrict automated data collection, scraping, and non-display usage** of their platform and data. This tool uses Chrome DevTools Protocol to programmatically interact with your **local desktop instance only**. You are responsible for ensuring your usage complies.
 3. **You assume all risk** associated with using this tool. The authors are not responsible for any account bans, suspensions, legal actions, or other consequences resulting from its use.
-4. This tool **must not be used** for, including but not limited to:
+4. This tool **must not be used** for:
    - Redistributing, reselling, or commercially exploiting TradingView's market data
    - Circumventing TradingView's access controls or subscription restrictions
    - Performing automated trading or algorithmic decision-making using extracted data
@@ -386,6 +428,8 @@ By using this software, you acknowledge and agree that:
 7. This tool accesses internal, undocumented TradingView application interfaces that may change or break at any time without notice.
 
 **Use at your own risk.** If you are unsure whether your intended use complies with TradingView's terms, do not use this tool.
+
+For full legal terms, see [LEGAL.md](LEGAL.md).
 
 ## License
 
